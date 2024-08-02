@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      POSTGRES_USER: vlad
+      POSTGRES_PASSWORD: qseawdzxc1
+      POSTGRES_DB: main
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  typesense:
+    image: typesense/typesense:0.23.1
+    container_name: typesense
+    environment:
+      TYPESENSE_API_KEY: examplekey
+      TYPESENSE_DATA_DIR: /data
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense_data:/data
+
+  migrations:
+    build: Dockerfile_migrations
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://vlad:qseawdzxc1@postgres:5432/main
+
+  app:
+    build: Dockerfile_fastapi
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  typesense_data:

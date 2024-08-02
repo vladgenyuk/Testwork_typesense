@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Upload Form</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .custom-file-input:lang(en)~.custom-file-label::after {
+      content: "Browse";
+    }
+    .custom-file-label::after {
+      background-color: #007bff;
+      color: white;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0 0.25rem 0.25rem 0;
+    }
+    .custom-file-label.selected::after {
+      content: "Change";
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header text-center bg-primary text-white">
+            <h4>Upload a File</h4>
+          </div>
+          <div class="card-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+              <div class="form-group">
+                <label for="file">Choose file to upload</label>
+                <div class="custom-file">
+                  <input type="file" class="custom-file-input" id="file" name="file">
+                  <label class="custom-file-label" for="file">Choose file</label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Upload</button>
+            </form>
+            <div id="response" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script>
+    // Update the label of the file input to show the selected file name
+    document.querySelector('.custom-file-input').addEventListener('change', function() {
+      var fileName = this.value.split("\\").pop();
+      this.nextElementSibling.classList.add('selected');
+      this.nextElementSibling.innerHTML = fileName;
+    });
+
+    // Handle form submission
+    document.getElementById('uploadForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      let formData = new FormData();
+      let fileField = document.querySelector('input[type="file"]');
+
+      formData.append('file', fileField.files[0]);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('response').innerText = data.message;
+      })
+      .catch(error => {
+        document.getElementById('response').innerText = 'Error: ' + error;
+      });
+    });
+  </script>
+</body>
+</html>
