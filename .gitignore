@@ -19,3 +19,4 @@ build/
 *.iml
 
 project/elektronika_products_20240802_123412.xml
+tests.py

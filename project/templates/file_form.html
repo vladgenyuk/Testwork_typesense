@@ -21,6 +21,8 @@
   </style>
 </head>
 <body>
+  <a class="btn btn-danger mr-2" href="{{ url_for('get_homepage') }}">Go back</a>
+
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-6">
@@ -50,14 +52,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script>
-    // Update the label of the file input to show the selected file name
     document.querySelector('.custom-file-input').addEventListener('change', function() {
       var fileName = this.value.split("\\").pop();
       this.nextElementSibling.classList.add('selected');
       this.nextElementSibling.innerHTML = fileName;
     });
 
-    // Handle form submission
     document.getElementById('uploadForm').addEventListener('submit', function (e) {
       e.preventDefault();
       let formData = new FormData();

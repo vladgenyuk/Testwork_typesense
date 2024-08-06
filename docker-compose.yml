@@ -12,6 +12,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "main"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   typesense:
     image: typesense/typesense:0.23.1
@@ -19,22 +24,25 @@ services:
     environment:
       TYPESENSE_API_KEY: examplekey
       TYPESENSE_DATA_DIR: /data
+      TYPESENSE_HOST: typesense
     ports:
       - "8108:8108"
     volumes:
       - typesense_data:/data
 
-  migrations:
-    build: Dockerfile_migrations
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: postgres://vlad:qseawdzxc1@postgres:5432/main
-
   app:
-    build: Dockerfile_fastapi
+    build: .
+    environment:
+      DB_HOST: postgres
+      TYPESENSE_HOST: typesense
+    command: /bin/sh -c "python -m migrations.typesense_migrations && python -m migrations.postgres_migrations && gunicorn project.backend:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      typesense:
+        condition: service_started
+    ports:
+      - "8000:8000"
 
 volumes:
   postgres_data:
