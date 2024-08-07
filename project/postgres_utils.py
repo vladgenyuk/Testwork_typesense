@@ -10,7 +10,7 @@ async def get_db_connection():
     return await asyncpg.connect(dsn=DATABASE_URL)
 
 
-async def insert_product(sku_item):
+async def insert_products_batch(sku_items):
     conn = await get_db_connection()
 
     columns = [
@@ -35,38 +35,48 @@ async def insert_product(sku_item):
         "similar_sku",
     ]
 
-    sku_data = {col: sku_item.get(col, None) for col in columns}
     now = datetime.now()
-    if not sku_data.get("uuid"):
+    values_list = []
+    int64_limit = 2**63
+
+    for sku_item in sku_items:
+        sku_data = {col: sku_item.get(col, None) for col in columns}
+        product_id = int(sku_data.get("product_id", 0))
         sku_data["uuid"] = str(uuid.uuid4())
-    if not sku_data.get("inserted_at"):
-        sku_data["inserted_at"] = now
-    if not sku_data.get("updated_at"):
-        sku_data["updated_at"] = now
+        sku_data["inserted_at"] = sku_data.get("inserted_at", now)
+        sku_data["updated_at"] = sku_data.get("updated_at", now)
 
-    sku_data["product_id"] = int(sku_data.get("product_id", 0))
-    sku_data["category_id"] = int(sku_data.get("category_id", 0))
-    sku_data["price_before_discounts"] = float(sku_data.get("price_before_discounts", 0.0))
-    sku_data["discount"] = float(sku_data.get("discount", 0.0))
-    sku_data["price_after_discounts"] = float(sku_data.get("price_after_discounts", 0.0))
-    sku_data["barcode"] = float(sku_data.get("barcode", 0))
+        sku_data["product_id"] = product_id if -int64_limit < product_id < int64_limit - 1 else 0
 
-    columns_str = ", ".join(columns)
-    placeholders_str = ", ".join([f"${i + 1}" for i in range(len(columns))])
+        sku_data["category_id"] = int(sku_data.get("category_id", 0))
+        sku_data["price_before_discounts"] = float(sku_data.get("price_before_discounts", 0.0))
+        sku_data["discount"] = float(sku_data.get("discount", 0.0))
+        sku_data["price_after_discounts"] = float(sku_data.get("price_after_discounts", 0.0))
+        sku_data["barcode"] = float(sku_data.get("barcode", 0))
+
+        values_list.append([sku_data.get(col) for col in columns])
+
+    placeholders = ", ".join(
+        [
+            f"({', '.join(['$' + str(i + j * len(columns) + 1) for i in range(len(columns))])})"
+            for j in range(len(values_list))
+        ]
+    )
+    values_flat = [val for sublist in values_list for val in sublist]
+
     insert_statement = f"""
-        INSERT INTO sku ({columns_str})
-        VALUES ({placeholders_str})
+        INSERT INTO sku ({', '.join(columns)})
+        VALUES {placeholders}
         RETURNING *;
     """
 
-    values = [sku_data.get(col) for col in columns]
     try:
-        inserted_product = dict(await conn.fetchrow(insert_statement, *values))
-        inserted_product["uuid"] = str(inserted_product.get("uuid"))
-        await conn.close()
-        return inserted_product
+        inserted_products = await conn.fetch(insert_statement, *values_flat)
+        results = [dict(product) for product in inserted_products]
+        return results
     except Exception as e:
         print(str(e))
+        return None
     finally:
         await conn.close()
 
